@@ -26,7 +26,11 @@ export function LiveOrdersScreen() {
   const [brothStarted, setBrothStarted] = useState(false);
 
   // Minutes since the data snapshot, so Dasher ETAs and kiosk wait times update live.
-  const elapsed = Math.max(0, Math.floor((now.getTime() - ctx.now.getTime()) / 60_000));
+  const sinceLoadSec = Math.max(0, (now.getTime() - ctx.now.getTime()) / 1000);
+  const elapsed = Math.floor(sinceLoadSec / 60);
+  // Orders are accepted the moment they're placed (DoorDash auto-accept / kiosk), so
+  // time since accepting = minutes ago at load + time since load, ticking every second.
+  const acceptedAgoSec = (o: ScoredOrder) => (o.placedMinAgo - elapsed) * 60 + sinceLoadSec;
   // Re-score every minute so priorities track pickup times as they count down.
   const live = useMemo(() => {
     const base = liveOrders(ctx.now).map((o) => ({ ...o, pickupInMin: o.pickupInMin - elapsed, placedMinAgo: o.placedMinAgo + elapsed }));
@@ -112,7 +116,7 @@ export function LiveOrdersScreen() {
               <AnimatePresence initial={false}>
                 {list.map((o, i) => (
                   <motion.div key={o.id} layout transition={{ type: "spring", stiffness: 380, damping: 34 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                    <OrderCard order={o} rank={i + 1} stage={stage[o.id] ?? "queued"} onWhy={() => setWhy(o)} onAdvance={() => advance(o)} />
+                    <OrderCard order={o} rank={i + 1} stage={stage[o.id] ?? "queued"} elapsedSec={acceptedAgoSec(o)} onWhy={() => setWhy(o)} onAdvance={() => advance(o)} />
                   </motion.div>
                 ))}
               </AnimatePresence>
