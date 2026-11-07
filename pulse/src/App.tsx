@@ -7,11 +7,12 @@ import { MenuScreen } from "@/screens/Menu";
 import { ForecastScreen } from "@/screens/Forecast";
 import { LiveOrdersScreen } from "@/screens/LiveOrders";
 import { SettingsScreen } from "@/screens/Settings";
+import { liveOrders } from "@/data/mock";
 
 function Screens() {
-  const { route, theme } = useApp();
+  const { route, theme, ctx } = useApp();
   return (
-    <Shell liveCount={9}>
+    <Shell liveCount={liveOrders(ctx.now).length}>
       <div key={route} className="h-full animate-[fade-in_180ms_ease-out]">
         {route === "insights" && <InsightsScreen />}
         {route === "heatmap" && <HeatmapScreen />}

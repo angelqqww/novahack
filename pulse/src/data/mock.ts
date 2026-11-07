@@ -243,7 +243,7 @@ export function weatherForecast(now: Date): DayWeather[] {
 }
 
 // ── Live orders on the tablet right now ──────────────────────────────────────
-const FIRST_NAMES = ["Maya", "Jordan", "Priya", "Leo", "Sofia", "Ethan", "Hana", "Marcus", "Ava", "Diego", "Noah", "Grace"];
+const FIRST_NAMES = ["Maya", "Jordan", "Priya", "Leo", "Sofia", "Ethan", "Hana", "Marcus", "Ava", "Diego", "Noah", "Grace", "Omar"];
 const DASHERS = ["Andre", "Kim", "Luis", "Tasha", "Omar", "Bea", "Ray", "Nia", "Sam", "Ivy", "Theo", "Jun"];
 
 export function liveOrders(now: Date): LiveOrder[] {
@@ -258,11 +258,16 @@ export function liveOrders(now: Date): LiveOrder[] {
     [{ itemId: "black_garlic", qty: 1 }, { itemId: "gyoza", qty: 1 }, { itemId: "yuzu", qty: 2 }],
     [{ itemId: "veggie_miso", qty: 1 }],
     [{ itemId: "shoyu", qty: 1 }, { itemId: "tonkotsu", qty: 1 }, { itemId: "gyoza", qty: 1 }],
+    [{ itemId: "karaage", qty: 1 }, { itemId: "yuzu", qty: 1 }],
+    [{ itemId: "tonkotsu", qty: 1 }, { itemId: "gyoza", qty: 1 }],
+    [{ itemId: "chashu_bowl", qty: 1 }, { itemId: "matcha", qty: 1 }],
+    [{ itemId: "curry", qty: 1 }],
   ];
-  const etas = [8, 21, 12, 12, 7, 3, 21, 26, 20];
-  const placed = [6, 2, 5, 3, 4, 7, 1, 1, 2];
-  // Jordan, Priya, Ethan and Marcus ordered on the in-store kiosks; everyone else is DoorDash.
-  const kiosk: Record<number, number> = { 1: 1, 2: 3, 5: 2, 7: 1 };
+  const etas = [8, 21, 12, 12, 7, 3, 21, 26, 20, 0, 0, 0, 0];
+  const placed = [6, 2, 5, 3, 4, 7, 1, 1, 2, 3, 4, 1, 6];
+  // In-store kiosk guests (index -> kiosk number); everyone else is DoorDash.
+  // Jordan, Priya, Ethan, Marcus, Diego, Noah, Grace and Omar ordered on the kiosks.
+  const kiosk: Record<number, number> = { 1: 1, 2: 3, 5: 2, 7: 1, 9: 2, 10: 3, 11: 1, 12: 2 };
   return baskets.map((items, i) => {
     const base = {
       id: (0x3a7f1 + i * 0x2b9 + Math.floor(r() * 16)).toString(16).toUpperCase().slice(-4),
