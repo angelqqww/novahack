@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* DoorDash-style light theme: white sheets on light gray, red pill actions. */
+@theme {
+  --color-page: #f4f4f4;
+  --color-card: #ffffff;
+  --color-ink: #191919;
+  --color-sub: #6b6b6b;
+  --color-faint: #a3a3a3;
+  --color-line: #e7e7e7;
+  --color-chip: #f1f1f1;
+  --color-chip-2: #e4e4e4;
+
+  --color-dd: #ff3008; /* brand red */
+  --color-dd-btn: #eb1700; /* button red */
+  --color-dd-tint: #fff0ed;
+  --color-walkin: #1f6feb;
+  --color-walkin-tint: #eaf2ff;
+  --color-ok: #008a4b;
+  --color-ok-bright: #00b25f;
+  --color-ok-tint: #e5f5ec;
+  --color-teal: #00838f; /* deal tags ("Buy 3, save $10") → batches */
+  --color-teal-tint: #def4f6;
+  --color-teal-dark: #0f5e63; /* DashPass-style toast */
+
+  --color-late: #eb1700;
+  --color-late-text: #d01400;
+  --color-now: #ff6a00;
+  --color-now-text: #c94f00;
+  --color-upcoming: #f5b400;
+  --color-upcoming-text: #8a6300;
+  --color-hold: #b5b5b5;
+  --color-hold-text: #6b6b6b;
+
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --shadow-sheet: 0 1px 2px rgb(0 0 0 / 0.05), 0 6px 20px rgb(0 0 0 / 0.07);
+  --shadow-pill: 0 1px 2px rgb(0 0 0 / 0.08), 0 2px 8px rgb(0 0 0 / 0.08);
+}
+
+html,
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes flash {
+  0% { box-shadow: 0 0 0 0 rgb(235 23 0 / 0.55), var(--shadow-sheet); }
+  100% { box-shadow: 0 0 0 16px rgb(235 23 0 / 0), var(--shadow-sheet); }
+}
+.flash {
+  animation: flash 1.2s ease-out 2;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
