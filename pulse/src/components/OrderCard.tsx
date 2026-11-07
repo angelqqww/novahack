@@ -20,12 +20,15 @@ export function OrderCard({
   stage,
   onWhy,
   onAdvance,
+  elapsedSec,
 }: {
   order: ScoredOrder;
   rank: number;
   stage: OrderStage;
   onWhy: () => void;
   onAdvance: () => void;
+  /** Seconds since the order was accepted (ticks live). */
+  elapsedSec?: number;
 }) {
   const level = priorityLevel(order.score);
   const moved = order.arrivalRank - rank;
@@ -79,13 +82,13 @@ export function OrderCard({
       </div>
 
       <div className="grid w-[246px] shrink-0 grid-cols-3 gap-1.5 text-sm">
-        <Meta icon={<Timer className="h-4 w-4" />} label="Elapsed" value={`${order.placedMinAgo} min`} tone={inStore && behind ? "danger" : undefined} />
         {inStore ? (
           <Meta icon={<Store className="h-4 w-4" />} label="Quoted" value={order.pickupInMin <= 0 ? "Now" : `${order.pickupInMin} min`} tone={behind ? "danger" : undefined} />
         ) : (
           <Meta icon={<Bike className="h-4 w-4" />} label="Dasher" value={order.pickupInMin <= 0 ? "Here" : `${order.pickupInMin} min`} tone={behind ? "danger" : undefined} />
         )}
         <Meta icon={<Clock className="h-4 w-4" />} label="Prep" value={`${order.prepMin} min`} />
+        <Meta icon={<Timer className="h-4 w-4" />} label="Elapsed" value={fmtElapsed(elapsedSec ?? order.placedMinAgo * 60)} tone={(elapsedSec ?? order.placedMinAgo * 60) >= 10 * 60 && stage !== "ready" ? "warn" : undefined} />
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
@@ -108,14 +111,20 @@ export function OrderCard({
   );
 }
 
-function Meta({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone?: "danger" }) {
+function Meta({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone?: "danger" | "warn" }) {
   return (
     <div className="min-w-0 rounded-xl bg-muted px-2.5 py-2">
       <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
         {icon}
         {label}
       </div>
-      <div className={cn("text-base font-bold tabular", tone === "danger" && "text-danger")}>{value}</div>
+      <div className={cn("text-base font-bold tabular", tone === "danger" && "text-danger", tone === "warn" && "text-[#a77400] dark:text-warning")}>{value}</div>
     </div>
   );
+}
+
+/** Time since the order was accepted, as m:ss. */
+function fmtElapsed(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
