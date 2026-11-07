@@ -11,12 +11,15 @@ All data is simulated. There's no real DoorDash/POS integration, database or aut
 ```bash
 cd one-line
 npm install
-npm run dev          # http://localhost:3000  (binds 0.0.0.0, so a phone on the same Wi-Fi works too)
+npm run dev          # http://localhost:3000/one-line  (binds 0.0.0.0, so a phone on the same Wi-Fi works too)
 npm test             # 36 vitest tests: scheduler, batching, prep model, demo scenario
 ```
 
-- `/kitchen`: the kitchen screen (tablet or TV, landscape).
-- `/control`: demo control panel.
+- `/one-line/kitchen`: the kitchen screen (tablet or TV, landscape).
+- `/one-line/control`: demo control panel.
+
+The app is served under the base path `/one-line` (set in `next.config.ts`), so it can share a Vercel
+domain with Pulse. API routes are at `/one-line/api/*`.
 - Optional: copy `.env.example` to `.env.local` and set `ANTHROPIC_API_KEY`. That turns on LLM order-note
   parsing and the AI "Explain the queue" summary. Without it, keyword rules and a template are used, and
   everything still works.

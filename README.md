@@ -17,7 +17,7 @@ Pulse (opens at http://localhost:5173):
 cd pulse && npm install && npm run dev
 ```
 
-One Line (opens at http://localhost:3000; open `/control`, load the demo, then `/kitchen`):
+One Line (opens at http://localhost:3000/one-line; open `/one-line/control`, load the demo, then `/one-line/kitchen`):
 
 ```bash
 cd one-line && npm install && npm run dev
@@ -37,7 +37,14 @@ kitchen_assist/.venv/bin/python -m kitchen_assist.demo
 
 Each folder has its own README with details, demo scripts and how to swap in real data.
 
-## Deploy Pulse to Vercel
+## Deploy to Vercel
 
-Import this repo on vercel.com, set **Root Directory** to `pulse`, and deploy. Vercel detects Vite
-automatically.
+`vercel.json` deploys Pulse and One Line as one Vercel project (services) on one domain:
+
+| Path | Service |
+|---|---|
+| `/` | Pulse |
+| `/one-line` (pages and its `/one-line/api/*`) | One Line |
+
+Import the repo on vercel.com and keep the **Root Directory** as the repo root. kitchen_assist is a
+command-line Python project, so it isn't deployed.

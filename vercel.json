@@ -1,0 +1,18 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "pulse": {
+      "root": "pulse",
+      "framework": "vite"
+    },
+    "one-line": {
+      "root": "one-line",
+      "framework": "nextjs"
+    }
+  },
+  "rewrites": [
+    { "source": "/one-line", "destination": { "service": "one-line" } },
+    { "source": "/one-line/(.*)", "destination": { "service": "one-line" } },
+    { "source": "/(.*)", "destination": { "service": "pulse" } }
+  ]
+}
