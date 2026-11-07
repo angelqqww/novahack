@@ -1,4 +1,4 @@
-import { Bike, ChefHat, Clock, Info, Layers } from "lucide-react";
+import { Bike, ChefHat, Clock, Info, Layers, Store, Timer } from "lucide-react";
 import { menuItem, priorityLevel, type ScoredOrder } from "@/lib/analytics";
 import { FoodPhoto } from "./FoodPhoto";
 import { Button } from "@/components/ui/button";
@@ -17,20 +17,20 @@ export type OrderStage = "queued" | "cooking" | "ready";
 export function OrderCard({
   order,
   rank,
-  etaMin,
   stage,
   onWhy,
   onAdvance,
 }: {
   order: ScoredOrder;
   rank: number;
-  etaMin: number;
   stage: OrderStage;
   onWhy: () => void;
   onAdvance: () => void;
 }) {
   const level = priorityLevel(order.score);
   const moved = order.arrivalRank - rank;
+  const inStore = order.channel === "kiosk";
+  const behind = order.prepMin > order.pickupInMin && stage !== "ready";
   return (
     <div className={cn("flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] transition-colors duration-200", rank === 1 && stage === "queued" ? "border-foreground/80" : "border-border", stage === "ready" && "opacity-60")}>
       <div className="flex w-12 shrink-0 flex-col items-center">
@@ -42,7 +42,7 @@ export function OrderCard({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <span className="truncate text-lg font-bold">{order.customer}</span>
+          <span className="shrink-0 text-lg font-bold">{order.customer}</span>
           <span className="text-sm font-medium text-muted-foreground tabular">#{order.id}</span>
           <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold tabular", LEVEL_STYLE[level])}>
             {level} · {order.score}
@@ -58,17 +58,32 @@ export function OrderCard({
             <div className="truncate text-sm text-muted-foreground">
               {order.items.map((it) => `${it.qty}× ${menuItem(it.itemId).name}`).join(", ")}
             </div>
-            {order.batchWith && (
-              <div className="mt-0.5 inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-primary">
-                <Layers className="h-3.5 w-3.5" /> Batch with #{order.batchWith}
-              </div>
-            )}
+            <div className="mt-1 flex items-center gap-2 whitespace-nowrap">
+              {inStore ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f1ff] px-2 py-0.5 text-xs font-bold text-[#1f6feb] dark:bg-[#14243d] dark:text-[#6aa6ff]">
+                  <Store className="h-3.5 w-3.5" /> In store · Kiosk {order.kiosk}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary">
+                  <Bike className="h-3.5 w-3.5" /> DoorDash
+                </span>
+              )}
+              {order.batchWith && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                  <Layers className="h-3.5 w-3.5" /> Batch with #{order.batchWith}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="grid w-[188px] shrink-0 grid-cols-2 gap-2 text-sm">
-        <Meta icon={<Bike className="h-4 w-4" />} label="Dasher" value={etaMin <= 0 ? "Here" : `${etaMin} min`} tone={etaMin <= order.prepMin && stage !== "ready" ? "danger" : undefined} />
+        {inStore ? (
+          <Meta icon={<Timer className="h-4 w-4" />} label="Waiting" value={`${order.placedMinAgo} min`} tone={behind ? "danger" : undefined} />
+        ) : (
+          <Meta icon={<Bike className="h-4 w-4" />} label="Dasher" value={order.pickupInMin <= 0 ? "Here" : `${order.pickupInMin} min`} tone={behind ? "danger" : undefined} />
+        )}
         <Meta icon={<Clock className="h-4 w-4" />} label="Prep" value={`${order.prepMin} min`} />
       </div>
 

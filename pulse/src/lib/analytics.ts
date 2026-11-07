@@ -617,7 +617,7 @@ export function insights(ctx: Ctx): Insight[] {
 }
 
 // ── Live order prioritization ────────────────────────────────────────────────
-export type Factor = { key: "dasher" | "prep" | "rush" | "batch" | "waiting"; label: string; detail: string; points: number };
+export type Factor = { key: "dasher" | "quote" | "guest" | "prep" | "rush" | "batch" | "waiting"; label: string; detail: string; points: number };
 export type ScoredOrder = LiveOrder & { score: number; factors: Factor[]; prepMin: number; arrivalRank: number; batchWith?: string; startIn: number };
 export type RushInfo = { inMin: number; hour: number; expected: number; current: number; prepItem: string } | null;
 
@@ -651,18 +651,36 @@ export function prioritize(ctx: Ctx, orders: LiveOrder[]): { orders: ScoredOrder
     // Orders already on the line only need the prep time they have left.
     const startedMin = o.status === "preparing" ? Math.max(0, o.placedMinAgo - 1) : 0;
     const prep = Math.max(1, fullPrep - startedMin);
-    // The core signal: how late would the food be for the Dasher if we started it right now?
-    const lateBy = prep - o.dasherEtaMin; // > 0 = Dasher waits; < 0 = minutes of slack
+    // The core signal: how late would the food be for whoever picks it up (Dasher, or the guest
+    // waiting in the store for their kiosk order) if we started it right now?
+    const inStore = o.channel === "kiosk";
+    const lateBy = prep - o.pickupInMin; // > 0 = someone waits; < 0 = minutes of slack
     const factors: Factor[] = [];
-    // 1. Dasher timing (0–70): 50 at "ready exactly when the Dasher walks in", +5/min late, −5/min of slack.
-    const dasherPts = Math.round(lateBy >= 0 ? 50 + Math.min(20, lateBy * 5) : Math.max(0, 50 + lateBy * 5));
-    if (dasherPts > 0)
+    // 1. Pickup timing (0–70): 50 at "ready exactly at pickup", +5/min late, −5/min of slack.
+    const timingPts = Math.round(lateBy >= 0 ? 50 + Math.min(20, lateBy * 5) : Math.max(0, 50 + lateBy * 5));
+    if (inStore) {
+      const quoteLeft = o.pickupInMin;
+      factors.push({
+        key: "guest",
+        label: "Guest waiting in store",
+        detail: `${o.customer} ordered at kiosk ${o.kiosk} ${o.placedMinAgo} min ago and is in the store now.`,
+        points: 10,
+      });
+      if (timingPts > 0)
+        factors.push({
+          key: "quote",
+          label: lateBy > 0 ? "Past the kiosk's quoted time" : "Quoted ready time coming up",
+          detail: lateBy > 0 ? `Quoted ready in ${Math.max(0, quoteLeft)} min; food needs ${prep} min, so about ${lateBy} min past the quote` : `Quoted ready in ${quoteLeft} min; food needs ${prep} min (${-lateBy} min to spare)`,
+          points: timingPts,
+        });
+    } else if (timingPts > 0) {
       factors.push({
         key: "dasher",
         label: lateBy > 0 ? "Dasher will be waiting" : "Dasher arriving soon",
-        detail: lateBy > 0 ? `${o.dasherName} arrives in ${o.dasherEtaMin} min; food needs ${prep} min, so about ${lateBy} min late` : `${o.dasherName} arrives in ${o.dasherEtaMin} min; food needs ${prep} min (${-lateBy} min to spare)`,
-        points: dasherPts,
+        detail: lateBy > 0 ? `${o.dasherName} arrives in ${o.pickupInMin} min; food needs ${prep} min, so about ${lateBy} min late` : `${o.dasherName} arrives in ${o.pickupInMin} min; food needs ${prep} min (${-lateBy} min to spare)`,
+        points: timingPts,
       });
+    }
     const notStarted = o.status !== "preparing";
     // 2. Long prep items: start them early (only matters if not started yet).
     if (notStarted && fullPrep >= 12) factors.push({ key: "prep", label: "Long prep items", detail: `${MENU_BY_ID[[...o.items].sort((a, b) => MENU_BY_ID[b.itemId].prepMin - MENU_BY_ID[a.itemId].prepMin)[0].itemId].name} takes about ${fullPrep} min right now`, points: 5 });
@@ -678,11 +696,11 @@ export function prioritize(ctx: Ctx, orders: LiveOrder[]): { orders: ScoredOrder
     const score = Math.max(1, Math.min(99, factors.reduce((a, f) => a + f.points, 0)));
     return { ...o, score, factors: factors.sort((a, b) => b.points - a.points), prepMin: prep, arrivalRank: arrival.indexOf(o.id) + 1, batchWith: notStarted ? shared?.others[0] : undefined, startIn: Math.max(0, -lateBy) };
   });
-  scored.sort((a, b) => b.score - a.score || a.dasherEtaMin - b.dasherEtaMin);
+  scored.sort((a, b) => b.score - a.score || a.pickupInMin - b.pickupInMin);
   return { orders: scored, rush };
 }
 
 export function priorityLevel(score: number): "Urgent" | "High" | "Normal" | "Low" {
-  // Urgent = the Dasher will wait; High = start now; Normal = start soon; Low = plenty of time.
+  // Urgent = someone (Dasher or in-store guest) will wait; High = start now; Normal = start soon; Low = plenty of time.
   return score >= 70 ? "Urgent" : score >= 50 ? "High" : score >= 25 ? "Normal" : "Low";
 }

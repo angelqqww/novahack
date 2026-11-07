@@ -49,12 +49,18 @@ export type DayWeather = { date: string; dow: number; condition: "sun" | "cloud"
 export type LiveOrder = {
   id: string;
   customer: string;
+  channel: "doordash" | "kiosk"; // kiosk = ordered in the store, waiting there
   items: { itemId: string; qty: number }[];
   placedMinAgo: number;
-  dasherEtaMin: number; // minutes until the Dasher arrives
-  dasherName: string;
+  /** Minutes until pickup: the Dasher's ETA, or the kiosk's quoted ready time. */
+  pickupInMin: number;
+  dasherName?: string; // DoorDash only
+  kiosk?: number; // kiosk only: which kiosk (1–3)
   status: "new" | "preparing";
 };
+
+/** In-store kiosk orders are quoted "ready in about 12 minutes". */
+export const KIOSK_QUOTE_MIN = 12;
 
 // ── Store ────────────────────────────────────────────────────────────────────
 export const STORE = {
@@ -255,15 +261,20 @@ export function liveOrders(now: Date): LiveOrder[] {
   ];
   const etas = [8, 21, 12, 12, 7, 3, 21, 26, 20];
   const placed = [6, 2, 5, 3, 4, 7, 1, 1, 2];
-  return baskets.map((items, i) => ({
-    id: (0x3a7f1 + i * 0x2b9 + Math.floor(r() * 16)).toString(16).toUpperCase().slice(-4),
-    customer: FIRST_NAMES[i],
-    items,
-    placedMinAgo: placed[i],
-    dasherEtaMin: etas[i],
-    dasherName: DASHERS[i],
-    status: placed[i] >= 5 ? "preparing" : "new",
-  }));
+  // Jordan, Priya, Ethan and Marcus ordered on the in-store kiosks; everyone else is DoorDash.
+  const kiosk: Record<number, number> = { 1: 1, 2: 3, 5: 2, 7: 1 };
+  return baskets.map((items, i) => {
+    const base = {
+      id: (0x3a7f1 + i * 0x2b9 + Math.floor(r() * 16)).toString(16).toUpperCase().slice(-4),
+      customer: FIRST_NAMES[i],
+      items,
+      placedMinAgo: placed[i],
+      status: (placed[i] >= 5 ? "preparing" : "new") as LiveOrder["status"],
+    };
+    return kiosk[i]
+      ? { ...base, channel: "kiosk" as const, kiosk: kiosk[i], pickupInMin: KIOSK_QUOTE_MIN - placed[i] }
+      : { ...base, channel: "doordash" as const, dasherName: DASHERS[i], pickupInMin: etas[i] };
+  });
 }
 
 export const PHOTO_CREDIT_NOTE = "Food photography from Unsplash (unsplash.com/photos/<id>), used under the Unsplash License.";

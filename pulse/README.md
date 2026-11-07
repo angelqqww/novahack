@@ -22,7 +22,7 @@ npm run build
 - **Menu**: photo cards with Star / Rising / Slow mover / Often sold out badges, 4 sorts, item detail sheet.
 - **Forecast**: 7-day forecast (actual solid, predicted dashed, 80% band, last week's accuracy), smart shopping
   list with CSV export, prep plan, staffing.
-- **Live Orders**: queue ranked by AI priority score, "why this order is first" sheet, rush banner, and a panel
+- **Live Orders**: DoorDash orders and in-store kiosk guests in one queue, ranked by AI priority score, "why this order is first" sheet, rush banner, and a panel
   showing which analytics feed the ranking. Toggle "Arrival order" to compare.
 - **Settings**: dark mode, store status, demo clock, new-store "learning" mode, and Loading / Empty / Error previews.
 

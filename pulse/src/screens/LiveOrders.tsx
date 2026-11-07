@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Bike, CheckCircle2, Clock, Flame, Grid3x3, Layers, Sparkles, TrendingUp, UtensilsCrossed, Zap } from "lucide-react";
+import { ArrowRight, Bike, CheckCircle2, Timer, Clock, Flame, Grid3x3, Layers, Sparkles, Store, TrendingUp, UtensilsCrossed, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { useApp, useNow } from "@/app/state";
 import { api } from "@/data/api";
@@ -14,7 +14,7 @@ import { forecastHour, hourLabel, menuItem, prioritize, priorityLevel, type Fact
 import { liveOrders } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
-const FACTOR_ICON: Record<Factor["key"], typeof Bike> = { dasher: Bike, prep: Clock, rush: TrendingUp, batch: Layers, waiting: Clock };
+const FACTOR_ICON: Record<Factor["key"], typeof Bike> = { dasher: Bike, quote: Timer, guest: Store, prep: Clock, rush: TrendingUp, batch: Layers, waiting: Clock };
 
 export function LiveOrdersScreen() {
   const { ctx, go } = useApp();
@@ -25,11 +25,11 @@ export function LiveOrdersScreen() {
   const [mode, setMode] = useState<"ai" | "arrival">("ai");
   const [brothStarted, setBrothStarted] = useState(false);
 
-  // Minutes since the data snapshot, so Dasher ETAs count down live.
+  // Minutes since the data snapshot, so Dasher ETAs and kiosk wait times update live.
   const elapsed = Math.max(0, Math.floor((now.getTime() - ctx.now.getTime()) / 60_000));
-  // Re-score every minute so priorities track the Dasher ETAs as they count down.
+  // Re-score every minute so priorities track pickup times as they count down.
   const live = useMemo(() => {
-    const base = liveOrders(ctx.now).map((o) => ({ ...o, dasherEtaMin: o.dasherEtaMin - elapsed, placedMinAgo: o.placedMinAgo + elapsed }));
+    const base = liveOrders(ctx.now).map((o) => ({ ...o, pickupInMin: o.pickupInMin - elapsed, placedMinAgo: o.placedMinAgo + elapsed }));
     return prioritize({ ...ctx, now: new Date(ctx.now.getTime() + elapsed * 60_000) }, base);
   }, [ctx, elapsed]);
   const rush = q.data ? live.rush : null;
@@ -46,7 +46,8 @@ export function LiveOrdersScreen() {
     const cur = stage[o.id] ?? "queued";
     const next: OrderStage = cur === "queued" ? "cooking" : "ready";
     setStage((s) => ({ ...s, [o.id]: next }));
-    if (next === "ready") toast.success(`${o.customer}'s order is ready`, { description: `Bagged for ${o.dasherName}.` });
+    if (next === "ready")
+      toast.success(`${o.customer}'s order is ready`, { description: o.channel === "kiosk" ? `Call ${o.customer} to the pickup counter (kiosk ${o.kiosk}).` : `Bagged for ${o.dasherName}.` });
   };
 
   const curPrep = forecastHour(ctx, ctx.now, ctx.now.getHours(), "prep").mean;
@@ -111,7 +112,7 @@ export function LiveOrdersScreen() {
               <AnimatePresence initial={false}>
                 {list.map((o, i) => (
                   <motion.div key={o.id} layout transition={{ type: "spring", stiffness: 380, damping: 34 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                    <OrderCard order={o} rank={i + 1} etaMin={o.dasherEtaMin} stage={stage[o.id] ?? "queued"} onWhy={() => setWhy(o)} onAdvance={() => advance(o)} />
+                    <OrderCard order={o} rank={i + 1} stage={stage[o.id] ?? "queued"} onWhy={() => setWhy(o)} onAdvance={() => advance(o)} />
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -126,6 +127,7 @@ export function LiveOrdersScreen() {
             <Signal icon={<TrendingUp className="h-4 w-4" />} source="Forecast" text={rush ? `Rush at ${hourLabel(rush.hour)}: ${rush.expected} orders expected` : "No rush in the next hour"} effect="Ramen tickets move up" onOpen={() => go("forecast")} />
             <Signal icon={<Grid3x3 className="h-4 w-4" />} source="Heatmap" text={`Prep runs ${curPrep.toFixed(1)} min at this hour`} effect="Sets each prep time" onOpen={() => go("heatmap")} />
             <Signal icon={<Layers className="h-4 w-4" />} source="Menu" text={`${batchCount} orders share items`} effect="Cook them together" onOpen={() => go("menu")} />
+            <Signal icon={<Store className="h-4 w-4" />} source="Kiosk" text={`${live.orders.filter((o) => o.channel === "kiosk").length} guests waiting in the store`} effect="In-person guests get a boost" />
             <Signal icon={<Bike className="h-4 w-4" />} source="Dasher ETAs" text="Live from DoorDash" effect="Food ready as they arrive" />
           </div>
         </Card>
@@ -133,7 +135,7 @@ export function LiveOrdersScreen() {
           <div className="space-y-2 text-sm">
             {(
               [
-                ["Urgent · Dasher will wait", "70+", "bg-danger"],
+                ["Urgent · someone will wait", "70+", "bg-danger"],
                 ["High · start now", "50–69", "bg-warning"],
                 ["Normal · start soon", "25–49", "bg-muted-foreground/40"],
                 ["Low · plenty of time", "under 25", "bg-border"],
@@ -215,11 +217,11 @@ function WhySheet({ order, onClose }: { order: ScoredOrder | null; onClose: () =
                   </div>
                 );
               })}
-              {!order.factors.length && <p className="text-sm text-muted-foreground">Nothing urgent: the Dasher is far away and prep is quick. Pulse keeps it lower so urgent tickets go first.</p>}
+              {!order.factors.length && <p className="text-sm text-muted-foreground">Nothing urgent: pickup is a while away and prep is quick. Pulse keeps it lower so urgent tickets go first.</p>}
             </div>
 
             <div className="mt-6 rounded-2xl bg-muted p-4 text-sm leading-relaxed text-muted-foreground">
-              <b className="text-foreground">How the score works:</b> The biggest part (up to 70) is Dasher timing: 50 points if the food would be ready exactly as the Dasher walks in, 5 more for every minute they'd wait, 5 fewer for every minute of slack. Small boosts: a predicted rush (Forecast, +10), long prep items (+5), batching with another order (Menu data, +5), time waiting (up to +5). Orders already cooking only count the prep time they have left, which comes from your Heatmap for this hour.
+              <b className="text-foreground">How the score works:</b> The biggest part (up to 70) is pickup timing: 50 points if the food would be ready exactly when the Dasher walks in (or at the time the kiosk quoted an in-store guest), 5 more for every minute they'd wait, 5 fewer for every minute of slack. Guests waiting in the store get +10. Small boosts: a predicted rush (Forecast, +10), long prep items (+5), batching with another order (Menu data, +5), time waiting (up to +5). Orders already cooking only count the prep time they have left, which comes from your Heatmap for this hour.
             </div>
             <div className="h-6 shrink-0" />
           </div>
